@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="角球預測">
+<meta name="format-detection" content="telephone=no">
+<title>角球預測思維導圖</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#e8ede9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1310" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{touch-action:manipulation;overscroll-behavior:none}
+/* Layout: one-screen tactics board. Toolbar on top, mirrored mind map on a pitch-tinted board (halfway line splits home attack left / away attack right), selection panel on the right (bottom sheet on phones). */
+:root{
+  --bg:#e8ede9; --board:#f6f8f6; --surface:#ffffff; --ink:#18211c; --muted:#5f6c65; --faint:#a9b3ad;
+  --line:#b6c1b9; --hair:#d7dfd9; --pitch:#d2dbd4; --scrim:rgba(14,22,18,.42);
+  --home:#1f58c4; --home-soft:#dfe8fa; --on-home:#ffffff;
+  --away:#c9411f; --away-soft:#fae3dc; --on-away:#ffffff;
+  --warn:#b3261e;
+  --f-ui:-apple-system,"PingFang TC","Hiragino Sans TC","Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-map:"PingFang SC","Hiragino Sans GB","Noto Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-num:"Avenir Next Condensed","DIN Condensed","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1310; --board:#121a16; --surface:#18221d; --ink:#e2e9e4; --muted:#8f9c94; --faint:#4f5c55;
+  --line:#3e4b44; --hair:#26312b; --pitch:#24302a; --scrim:rgba(0,0,0,.6);
+  --home:#7ca6f6; --home-soft:#1a2741; --on-home:#0a1222;
+  --away:#ff8b6c; --away-soft:#3a2119; --on-away:#200c06;
+  --warn:#ff7166; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0d1310; --board:#121a16; --surface:#18221d; --ink:#e2e9e4; --muted:#8f9c94; --faint:#4f5c55;
+  --line:#3e4b44; --hair:#26312b; --pitch:#24302a; --scrim:rgba(0,0,0,.6);
+  --home:#7ca6f6; --home-soft:#1a2741; --on-home:#0a1222;
+  --away:#ff8b6c; --away-soft:#3a2119; --on-away:#200c06;
+  --warn:#ff7166; color-scheme:dark;
+}
+html{height:100%;box-sizing:border-box}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--f-ui);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0;
+  -webkit-text-size-adjust:100%}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;padding-block:12px 16px}
+
+/* toolbar */
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.brand{display:flex;align-items:baseline;gap:8px;margin-right:auto}
+.brand h1{margin:0;font-size:19px;font-weight:700;letter-spacing:.04em}
+.brand span{font-size:12.5px;color:var(--muted);letter-spacing:.08em}
+.teams{display:flex;align-items:center;gap:8px}
+.team{display:flex;align-items:center;gap:7px;height:34px;padding:0 10px;background:var(--surface);border:1px solid var(--hair);border-radius:9px}
+.team .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.team.home .dot{background:var(--home)} .team.away .dot{background:var(--away)}
+.team input{width:7.5em;border:0;background:transparent;outline:none;font-size:14px;font-weight:500}
+.team input::placeholder{color:var(--muted);font-weight:400}
+.team:focus-within{border-color:var(--ink)}
+.vs{font-family:var(--f-num);font-weight:700;font-size:16px;color:var(--muted);letter-spacing:.04em}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--hair);background:var(--surface);font-size:13.5px;font-weight:500;white-space:nowrap;touch-action:manipulation}
+.btn:hover{border-color:var(--line)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.arm{background:var(--warn);border-color:var(--warn);color:#fff}
+
+/* main */
+.main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;min-height:0}
+.board{position:relative;min-width:0;min-height:0;background:var(--board);border:1px solid var(--hair);border-radius:14px;overflow:hidden}
+.stage{position:absolute;inset:0;overflow:hidden;touch-action:none;cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.stage.dragging{cursor:grabbing}
+.stage.onleaf{cursor:pointer}
+.map,.world{position:absolute;left:0;top:0;display:block;transform-origin:0 0;will-change:transform}
+.world{width:1px;height:1px}
+.base{position:absolute;left:0;top:0;display:block}
+.overlay{pointer-events:none}
+.stage.anim .map,.stage.anim .world{transition:transform .3s cubic-bezier(.2,.7,.25,1)}
+.flashbox{position:absolute;left:0;top:0;border-radius:12px;border:2px solid var(--home);background:var(--home-soft);pointer-events:none;opacity:0;animation:flash 1.6s ease-out forwards}
+.perf{position:absolute;right:12px;bottom:12px;margin:0;padding:4px 8px;border-radius:8px;background:var(--ink);color:var(--bg);font-size:12px;font-variant-numeric:tabular-nums;pointer-events:none}
+.flashbox.away{border-color:var(--away);background:var(--away-soft)}
+@keyframes flash{0%{opacity:0}12%{opacity:.55}65%{opacity:.55}100%{opacity:0}}
+.hint{position:absolute;top:10px;left:12px;right:12px;margin:0;pointer-events:none;font-size:12px;color:var(--muted)}
+.hint span{display:inline-block;background:var(--board);padding:2px 6px;border-radius:6px}
+.zoom{position:absolute;left:12px;bottom:12px;display:flex;background:var(--surface);border:1px solid var(--hair);border-radius:10px;overflow:hidden}
+.zoom button{height:36px;min-width:38px;padding:0 10px;border:0;border-right:1px solid var(--hair);background:transparent;font-size:17px;line-height:1;touch-action:manipulation}
+.zoom button:last-child{border-right:0;font-size:13.5px;font-weight:500}
+.zoom #zPct{font-family:var(--f-num);font-size:16px;font-weight:600;min-width:56px;font-variant-numeric:tabular-nums}
+.zoom button:hover{background:var(--bg)}
+
+/* panel */
+.panel{width:372px;display:flex;flex-direction:column;min-height:0;background:var(--surface);border:1px solid var(--hair);border-radius:14px;overflow:hidden}
+body:not(.panel-open) .panel{display:none}
+.panel-head{display:flex;align-items:stretch;gap:6px;border-bottom:1px solid var(--hair);padding:0 8px 0 0}
+.tabs{display:flex;flex:1;min-width:0}
+.tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:10px 14px 9px;border:0;border-bottom:3px solid transparent;background:transparent;text-align:left}
+.tab .tn{font-size:14px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab .tc{font-family:var(--f-num);font-size:15px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.tab[aria-selected="false"] .tn{color:var(--muted)}
+.tab.home[aria-selected="true"]{border-bottom-color:var(--home)}
+.tab.away[aria-selected="true"]{border-bottom-color:var(--away)}
+.close{display:none;align-self:center}
+.panel-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:6px 16px 28px}
+.pnote{margin:10px 0 2px;font-size:12px;color:var(--muted)}
+.grp{min-width:0}
+.grp h3{margin:18px 0 4px;font-size:15px;font-weight:700;white-space:pre-line;text-wrap:balance;font-family:var(--f-map)}
+.grp h4,.grp h5{margin:12px 0 2px;font-size:13px;font-weight:700;font-family:var(--f-map)}
+.grp h4{color:var(--muted);letter-spacing:.04em}
+.grp-body{padding-left:12px;border-left:1px solid var(--hair);margin-left:2px}
+.d0>.grp-body{border-left:0;padding-left:0;margin-left:0}
+.q{padding:8px 0 10px;display:grid;gap:7px}
+.q-head{display:flex;align-items:center;gap:8px}
+.q-label{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-family:var(--f-map);font-size:13.5px;font-weight:500}
+.q.big .q-label{font-size:15px;font-weight:700}
+.q-label::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--line)}
+.home .q.answered .q-label::before{background:var(--home);border-color:var(--home)}
+.away .q.answered .q-label::before{background:var(--away);border-color:var(--away)}
+.locate{flex:none;width:30px;height:30px;display:grid;place-items:center;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--muted)}
+.locate:hover{border-color:var(--hair);color:var(--ink)}
+.locate svg{width:16px;height:16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:32px;padding:4px 12px;border-radius:16px;border:1px solid var(--line);background:var(--surface);font-family:var(--f-map);font-size:13.5px;line-height:1.35;touch-action:manipulation}
+.chip.long{width:100%;text-align:left;border-radius:10px;padding:7px 12px}
+.home .chip:hover{border-color:var(--home)} .away .chip:hover{border-color:var(--away)}
+.home .chip[aria-pressed="true"]{background:var(--home);border-color:var(--home);color:var(--on-home);font-weight:500}
+.away .chip[aria-pressed="true"]{background:var(--away);border-color:var(--away);color:var(--on-away);font-weight:500}
+
+/* toast + dialog */
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13.5px;transition:opacity .2s,transform .2s;z-index:40;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.dialog{position:fixed;inset:0;z-index:50;background:var(--scrim);display:grid;place-items:center;padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+.dialog-card{width:min(520px,100%);background:var(--surface);border-radius:14px;padding:18px;display:grid;gap:12px}
+.dialog-card h2{margin:0;font-size:16px}
+.dialog-card p{margin:0;font-size:13px;color:var(--muted)}
+.dialog-card textarea{width:100%;height:260px;resize:vertical;border:1px solid var(--hair);border-radius:10px;padding:10px;background:var(--board);font-family:var(--f-map);font-size:13px;line-height:1.6}
+.dialog-card .row{display:flex;justify-content:flex-end}
+
+.install{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:45;display:flex;align-items:center;gap:12px;
+  width:min(560px,calc(100% - 32px));padding:10px 10px 10px 14px;border-radius:12px;background:var(--ink);color:var(--bg);font-size:13.5px;line-height:1.5}
+.install span{flex:1;min-width:0}
+.install .btn{flex:none;background:var(--bg);color:var(--ink);border-color:var(--bg)}
+@media (max-width:899px){
+  .main{grid-template-columns:minmax(0,1fr)}
+  .panel{position:fixed;left:0;right:0;bottom:0;width:auto;height:min(62%,560px);z-index:30;border-radius:16px 16px 0 0;border-bottom:0;
+    padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+    box-shadow:0 -10px 30px rgba(0,0,0,.18)}
+  .close{display:inline-flex;align-items:center}
+  .brand{margin-right:0;flex:1 1 100%}
+  .teams{flex:1 1 auto}
+  .team{flex:1;min-width:0} .team input{width:100%;min-width:0}
+  .hint .long{display:none}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}.flashbox{animation-duration:.9s}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand"><h1>角球預測</h1><span>思維導圖</span></div>
+    <div class="teams">
+      <label class="team home"><span class="dot"></span><input id="nameHome" maxlength="16" placeholder="主隊名稱" autocomplete="off" aria-label="主隊名稱"></label>
+      <span class="vs">VS</span>
+      <label class="team away"><span class="dot"></span><input id="nameAway" maxlength="16" placeholder="客隊名稱" autocomplete="off" aria-label="客隊名稱"></label>
+    </div>
+    <div class="actions">
+      <button class="btn" id="compactBtn" aria-pressed="false" title="已選的問題只保留你選的分支，全貌更緊湊">只看已選</button>
+      <button class="btn" id="copyBtn">複製結果</button>
+      <button class="btn" id="clearBtn">清空</button>
+      <button class="btn" id="panelBtn" aria-pressed="false" aria-controls="panel">選擇面板</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="board" id="board">
+      <div class="stage" id="stage">
+        <div class="world" id="worldBase" aria-hidden="true"><canvas class="base" id="base"></canvas></div>
+        <canvas class="map" id="map" role="img" aria-label="角球預測思維導圖，左半邊主隊進攻，右半邊客隊進攻。可用選擇面板逐項作答。"></canvas>
+        <div class="world overlay" id="worldTop" aria-hidden="true"><div class="flashbox" id="flashbox" hidden></div></div>
+      </div>
+      <p class="perf" id="perf" hidden></p>
+      <p class="hint"><span>點選末端分支即可選擇<span class="long">　·　滾輪／雙指縮放　·　拖曳移動</span></span></p>
+      <div class="zoom">
+        <button id="zOut" aria-label="縮小">−</button>
+        <button id="zPct" title="回到 100%">100%</button>
+        <button id="zIn" aria-label="放大">+</button>
+        <button id="zFit" title="顯示整個導圖">全貌</button>
+      </div>
+    </div>
+
+    <aside class="panel" id="panel" aria-label="逐項選擇">
+      <div class="panel-head">
+        <div class="tabs" role="tablist">
+          <button class="tab home" id="tab-home" role="tab" aria-selected="true" aria-controls="pside-home"><span class="tn">主隊進攻</span><span class="tc">0 / 19</span></button>
+          <button class="tab away" id="tab-away" role="tab" aria-selected="false" aria-controls="pside-away"><span class="tn">客隊進攻</span><span class="tc">0 / 19</span></button>
+        </div>
+        <button class="btn close" id="panelClose">收起</button>
+      </div>
+      <div class="panel-body" id="panelBody"></div>
+    </aside>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="install" id="installHint" hidden>
+  <span>點 Safari 的「分享」按鈕 →「加入主畫面」，之後就能從主畫面離線打開。</span>
+  <button class="btn" id="installClose">知道了</button>
+</div>
+<div class="dialog" id="copyDialog" hidden>
+  <div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="copyTitle">
+    <h2 id="copyTitle">選擇結果</h2>
+    <p>這裡無法自動複製，文字已全選，請手動複製。</p>
+    <textarea id="copyText" readonly></textarea>
+    <div class="row"><button class="btn" id="copyClose">關閉</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  /* ---------- 思維導圖內容（依原圖） ---------- */
+  const RATIO = ['几乎全部','主要','一半','偏少','偶尔'];
+  const RATE  = ['5/5','4/5','3/5','2/5','1/5','0/5'];
+  const COUNT = ['很多','中等','少'];
+  const YN    = ['❌','✅'];
+  const zone = z => ({ label:z, children:[
+    { label:'对面给不给机会', options:YN },
+    { label:'自己有没有能力', options:YN } ]});
+  const TREE = [
+    { label:'推进', children:[
+      { label:'对方防守策略', options:['退守','高压逼抢（边后卫退守）','全员高压逼抢'] },
+      { label:'控球时长', options:['多','一半','少'] },
+      { label:'方式➕效果', children:[
+        { label:'传控', children:[
+          { label:'采取这个方式的比例', options:RATIO },
+          { label:'节奏', options:['快','慢'] },
+          { label:'成功率', options:RATE } ]},
+        { label:'长传', children:[
+          { label:'采取这个方式的比例', options:RATIO },
+          { label:'节奏', options:['快','慢'] },
+          { label:'成功率', options:RATE } ]},
+        { label:'高压中场抢断', children:[
+          { label:'采取这个方式的比例', options:RATIO },
+          { label:'次数', options:COUNT } ]},
+        { label:'反击', children:[
+          { label:'采取这个方式的比例', options:RATIO },
+          { label:'次数', options:COUNT } ]},
+      ]},
+    ]},
+    { label:'是否有传球，射门，突破，控球的可能性\n（对面给机会/自己有能力）', children:[ zone('边锋'), zone('禁区内'), zone('弧顶') ]},
+    { label:'处理球果断性', options:[
+      '有机会也不传球，射门，突破，一定要等最好的进攻机会',
+      '有合适的进攻机会，就会传球，射门，突破',
+      '有事没事来一脚' ]},
+  ];
+
+  const QUESTIONS = [];
+  (function index(nodes, path){
+    nodes.forEach(n => {
+      n.path = [...path, n.label.replace('\n','')];
+      if (n.options){ n.key = n.path.join('›'); n.qi = QUESTIONS.length; QUESTIONS.push(n); }
+      else index(n.children, n.path);
+    });
+  })(TREE, []);
+  const TOTAL = QUESTIONS.length;
+  const SIDES = ['home','away'];
+  const DIR = { home:-1, away:1 };
+
+  /* ---------- 狀態（存在本機瀏覽器） ---------- */
+  const STORE = 'corner-mindmap-v1';
+  let state = { home:{}, away:{}, names:{home:'',away:''}, compact:false };
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (raw){
+      const s = JSON.parse(raw);
+      const keys = new Map(QUESTIONS.map(q => [q.key, q]));
+      SIDES.forEach(side => {
+        const src = (s && s[side]) || {};
+        Object.keys(src).forEach(k => {
+          const q = keys.get(k), i = src[k];
+          if (q && Number.isInteger(i) && i >= 0 && i < q.options.length) state[side][k] = i;
+        });
+      });
+      if (s && s.names){ state.names.home = String(s.names.home||'').slice(0,16); state.names.away = String(s.names.away||'').slice(0,16); }
+      state.compact = !!(s && s.compact);
+    }
+  } catch(e){}
+  let saveT = 0;
+  const flush = () => { clearTimeout(saveT); saveT = 0; try { localStorage.setItem(STORE, JSON.stringify(state)); } catch(e){} };
+  const save = () => { clearTimeout(saveT); saveT = setTimeout(flush, 250); };
+  addEventListener('pagehide', () => { if (saveT) flush(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState==='hidden' && saveT) flush(); });
+  const team = side => (state.names[side]||'').trim() || (side==='home' ? '主隊' : '客隊');
+  const other = side => side==='home' ? 'away' : 'home';
+  const answered = side => Object.keys(state[side]).length;
+
+  /* ---------- 版面計算 ---------- */
+  const UI_F  = '-apple-system,"PingFang TC","Hiragino Sans TC","Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei",system-ui,sans-serif';
+  const MAP_F = '"PingFang SC","Hiragino Sans GB","Noto Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif';
+  const ST = {
+    side:     { f:UI_F,  w:700, s:16,   lh:20, px:18, h:36 },
+    top:      { f:MAP_F, w:700, s:14,   lh:19, px:13, pad:11 },
+    group:    { f:MAP_F, w:700, s:13.5, lh:18, px:0,  pad:0 },
+    question: { f:MAP_F, w:500, s:13,   lh:18, px:0,  pad:0 },
+    leaf:     { f:MAP_F, w:400, s:13,   lh:18, px:10, h:22 },
+  };
+  Object.values(ST).forEach(st => st.font = `${st.w} ${st.s}px ${st.f}`);
+  const ROW = 28, LINK = 40, ROOT_R = 50, ROOT_LINK = 58, PITCH_R = 92;
+  const att = n => (n.kind==='group' || n.kind==='question') ? 7 : 0;
+  const mctx = document.createElement('canvas').getContext('2d');
+  const twCache = new Map();
+  const tw = (t, font) => {
+    const key = font + '|' + t;
+    let v = twCache.get(key);
+    if (v == null){ mctx.font = font; v = mctx.measureText(t).width; twCache.set(key, v); }
+    return v;
+  };
+
+  function viewTree(side){
+    const sel = state[side];
+    const mk = (n, depth) => {
+      if (n.options){
+        const chosen = sel[n.key];
+        let kids = n.options.map((o,i) => ({ kind:'leaf', label:o, side, qi:n.qi, i,
+          selected: chosen===i, muted: chosen!=null && chosen!==i }));
+        if (state.compact) kids = kids.filter(x => !x.muted);
+        return { kind: depth===0 ? 'top' : 'question', label:n.label, side, qi:n.qi, kids };
+      }
+      return { kind: depth===0 ? 'top' : 'group', label:n.label, side, kids: n.children.map(c => mk(c, depth+1)) };
+    };
+    return { kind:'side', label:`${team(side)}進攻`, side, kids: TREE.map(n => mk(n, 0)) };
+  }
+
+  function layoutSide(side){
+    const root = viewTree(side), all = [];
+    (function walk(n){
+      const st = ST[n.kind];
+      n.lines = n.label.split('\n');
+      n.tw = Math.max(...n.lines.map(l => tw(l, st.font)));
+      n.w = n.tw + st.px*2;
+      n.h = st.h || n.lines.length*st.lh + st.pad;
+      all.push(n);
+      if (n.kids) n.kids.forEach(walk);
+    })(root);
+    let cur = 0;
+    const gap = n => n.kind==='side' ? 36
+      : n.kids.every(k => k.kind==='leaf') ? 0
+      : n.kids.every(k => k.kids && k.kids.every(g => g.kind==='leaf')) ? 10 : 20;
+    (function lay(n){
+      if (!n.kids || !n.kids.length){ n.y = cur + ROW/2; cur += ROW; return; }
+      const g = gap(n);
+      n.kids.forEach((k,i) => { if (i) cur += g; lay(k); });
+      n.y = (n.kids[0].y + n.kids[n.kids.length-1].y) / 2;
+    })(root);
+    const dy = -root.y, d = DIR[side];
+    (function setX(n, x0){
+      n.x0 = x0; n.x1 = x0 + n.w; n.y += dy;
+      n.cx = d*(n.x0+n.x1)/2; n.left = d>0 ? n.x0 : -n.x1;
+      n.top = n.y - n.h/2;
+      if (n.kids) n.kids.forEach(k => setX(k, n.x1 + LINK));
+    })(root, ROOT_R + ROOT_LINK);
+    (function act(n){
+      if (n.kind==='leaf') return (n.active = n.selected);
+      n.active = false; n.kids.forEach(k => { if (act(k)) n.active = true; });
+      return n.active;
+    })(root);
+    const edges = [];
+    const addEdge = (on, x1, y1, x2, y2) => edges.push({ side, on, x1, y1, x2, y2, m:(x1+x2)/2,
+      bx0:Math.min(x1,x2), bx1:Math.max(x1,x2), by0:Math.min(y1,y2), by1:Math.max(y1,y2) });
+    addEdge(root.active, d*ROOT_R, 0, d*root.x0, root.y);
+    all.forEach(p => { if (p.kids) p.kids.forEach(c => addEdge(c.active, d*(p.x1+att(p)), p.y, d*(c.x0-att(c)), c.y)); });
+    return { side, root, all, edges };
+  }
+
+  /* ---------- 場景 ---------- */
+  let scene = null, leafPos = new Map(), qBox = new Map(), leafBoxes = [], bounds = { x:-400, y:-400, w:800, h:800 };
+  function render(anchor){
+    const Ls = SIDES.map(layoutSide);
+    const newLeafPos = new Map(); qBox = new Map(); leafBoxes = [];
+    let minX = -ROOT_R, maxX = ROOT_R, minY = -ROOT_R, maxY = ROOT_R;
+    const ext = {};
+    const byKind = { side:[], top:[], group:[], question:[], leaf:[] };
+    Ls.forEach(L => {
+      let e = 0;
+      L.all.forEach(n => {
+        byKind[n.kind].push(n);
+        minX = Math.min(minX, n.left); maxX = Math.max(maxX, n.left+n.w);
+        minY = Math.min(minY, n.top); maxY = Math.max(maxY, n.top+n.h);
+        e = Math.max(e, n.x1);
+        if (n.kind==='leaf'){
+          newLeafPos.set(`${n.side}|${n.qi}|${n.i}`, { x:n.cx, y:n.y });
+          leafBoxes.push({ side:n.side, qi:n.qi, i:n.i, x0:n.left-6, x1:n.left+n.w+6, y0:n.y-ROW/2+1, y1:n.y+ROW/2-1 });
+        }
+        if (n.qi!=null && n.kind!=='leaf'){
+          const xs = [n.left, n.left+n.w], ys = [n.top, n.top+n.h];
+          n.kids.forEach(k => { xs.push(k.left, k.left+k.w); ys.push(k.top, k.top+k.h); });
+          qBox.set(`${n.side}|${n.qi}`, { x0:Math.min(...xs), x1:Math.max(...xs), y0:Math.min(...ys), y1:Math.max(...ys) });
+        }
+      });
+      ext[L.side] = e;
+    });
+    const headY = minY - 64, heads = [];
+    SIDES.forEach(side => {
+      const d = DIR[side];
+      const x = d*(ROOT_R + (ext[side]-ROOT_R)/2);
+      const t1 = `${team(side)} 向 ${team(other(side))} 進攻`;
+      const t2 = `導圖${side==='home'?'左':'右'}半邊 · 已選 ${answered(side)} / ${TOTAL}`;
+      const hw = tw(t1, `700 28px ${UI_F}`);
+      minX = Math.min(minX, x-hw/2); maxX = Math.max(maxX, x+hw/2);
+      heads.push({ side, x, y:headY, t1, t2, hw });
+    });
+    minY = headY - 40; maxY += 44;
+    const short = s => s.length > 6 ? s.slice(0,6)+'…' : s;
+    scene = { byKind, edges: Ls.flatMap(L => L.edges), heads, pitchY0:minY+8, pitchY1:maxY-8,
+      centerSub: `${short(team('home'))} vs ${short(team('away'))}` };
+    bounds = { x:minX-24, y:minY, w:(maxX-minX)+48, h:maxY-minY };
+    if (anchor){
+      const k = `${anchor.side}|${anchor.qi}|${anchor.i}`;
+      const a = leafPos.get(k), b = newLeafPos.get(k);
+      if (a && b){ V.tx -= (b.x-a.x)*V.s; V.ty -= (b.y-a.y)*V.s; }
+    }
+    leafPos = newLeafPos;
+    leafNodes = new Map(byKind.leaf.map(n => [`${n.side}|${n.qi}|${n.i}`, n]));
+    invalidate();
+  }
+
+  /* ---------- Canvas 繪製 ----------
+     導圖畫在一張比畫面稍大的畫布上。手勢進行中只讓 GPU 平移/縮放這張畫布（完全不重畫），
+     放開手指後才按新比例重畫一次，文字回到清晰。
+     背後另有一張低解析度的全圖，縮小或拖到很遠時用來填補邊緣，畫面不會出現空白。 */
+  const stage = document.getElementById('stage');
+  const cv = document.getElementById('map'), ctx = cv.getContext('2d', { alpha:false });
+  const base = document.getElementById('base'), bctx = base.getContext('2d', { alpha:false });
+  const flashEl = document.getElementById('flashbox');
+  const worldBase = document.getElementById('worldBase'), worldTop = document.getElementById('worldTop');
+  const V = { s:1, tx:0, ty:0 };   // 手指當前的視圖
+  const C = { s:1, tx:0, ty:0 };   // 畫布上已經畫好的視圖
+  let W = 0, H = 0, M = 160, DPR = 1, hoverKey = null, leafNodes = new Map(), flashT = 0, lastDrawMs = 0;
+  const COL = {};
+  function readColors(){
+    const cs = getComputedStyle(document.documentElement);
+    ['board','surface','ink','muted','faint','line','hair','pitch','home','home-soft','on-home','away','away-soft','on-away']
+      .forEach(n => COL[n] = cs.getPropertyValue('--'+n).trim() || '#888');
+  }
+  readColors();
+  let themeSig = JSON.stringify(COL);
+  const themeChanged = () => { readColors(); const sig = JSON.stringify(COL); if (sig !== themeSig){ themeSig = sig; drawBase(); commit(true); } };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', themeChanged);
+  new MutationObserver(themeChanged).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme','class','style'] });
+
+  function rrect(c, x, y, w, h, r){
+    c.beginPath();
+    if (c.roundRect) c.roundRect(x, y, w, h, r);
+    else {
+      c.moveTo(x+r, y); c.arcTo(x+w, y, x+w, y+h, r); c.arcTo(x+w, y+h, x, y+h, r);
+      c.arcTo(x, y+h, x, y, r); c.arcTo(x, y, x+w, y, r); c.closePath();
+    }
+  }
+  function drawLines(c, n, st, lod){
+    const k = n.lines.length;
+    const base0 = n.y - (k-1)*st.lh/2 + st.s*0.36;
+    if (lod){
+      for (let i = 0; i < k; i++){
+        const w = k===1 ? n.tw : tw(n.lines[i], st.font);
+        c.fillRect(n.cx - w/2, base0 + i*st.lh - st.s*0.72, w, st.s*0.6);
+      }
+      return;
+    }
+    for (let i = 0; i < k; i++) c.fillText(n.lines[i], n.cx, base0 + i*st.lh);
+  }
+  const leafColors = n => n.selected ? [COL[n.side], COL[n.side], COL['on-'+n.side], 1.6]
+    : n.muted ? [COL.board, COL.hair, COL.faint, 1] : [COL.surface, COL.line, COL.ink, 1];
+
+  // 畫出世界座標 [x0,x1]×[y0,y1] 範圍內的內容；s 是這次繪製相當於螢幕上的縮放比例
+  function drawScene(c, x0, y0, x1, y1, s){
+    const S = scene, px = v => v/s, pad = 6/s;
+    const vis = (a, b, cc, d) => cc >= x0-pad && a <= x1+pad && d >= y0-pad && b <= y1+pad;
+    c.strokeStyle = COL.pitch; c.lineWidth = px(2);
+    c.beginPath(); c.moveTo(0, S.pitchY0); c.lineTo(0, S.pitchY1);
+    if (vis(-PITCH_R, -PITCH_R, PITCH_R, PITCH_R)){ c.moveTo(PITCH_R, 0); c.arc(0, 0, PITCH_R, 0, Math.PI*2); }
+    c.stroke();
+
+    c.lineCap = 'round';
+    c.beginPath(); let any = false;
+    for (const e of S.edges) if (!e.on && vis(e.bx0, e.by0, e.bx1, e.by1)){ any = true; c.moveTo(e.x1, e.y1); c.bezierCurveTo(e.m, e.y1, e.m, e.y2, e.x2, e.y2); }
+    if (any){ c.strokeStyle = COL.line; c.lineWidth = px(1.4); c.stroke(); }
+    for (const side of SIDES){
+      c.beginPath(); any = false;
+      for (const e of S.edges) if (e.on && e.side===side && vis(e.bx0, e.by0, e.bx1, e.by1)){ any = true; c.moveTo(e.x1, e.y1); c.bezierCurveTo(e.m, e.y1, e.m, e.y2, e.x2, e.y2); }
+      if (any){ c.strokeStyle = COL[side]; c.lineWidth = px(3); c.stroke(); }
+    }
+
+    for (const n of S.byKind.side){
+      if (!vis(n.left, n.top, n.left+n.w, n.top+n.h)) continue;
+      rrect(c, n.left, n.top, n.w, n.h, n.h/2); c.fillStyle = COL[n.side]; c.fill();
+    }
+    for (const n of S.byKind.top){
+      if (!vis(n.left, n.top, n.left+n.w, n.top+n.h)) continue;
+      rrect(c, n.left, n.top, n.w, n.h, Math.min(n.h/2, 12));
+      c.fillStyle = COL.surface; c.fill();
+      c.strokeStyle = n.active ? COL[n.side] : COL.line; c.lineWidth = px(n.active ? 2.4 : 1.4); c.stroke();
+    }
+    for (const n of S.byKind.leaf){
+      if (!vis(n.left, n.top, n.left+n.w, n.top+n.h)) continue;
+      const hov = !n.selected && hoverKey === `${n.side}|${n.qi}|${n.i}`;
+      const [f, st, , lw] = hov ? [COL[n.side+'-soft'], COL[n.side], , 1] : leafColors(n);
+      rrect(c, n.left, n.top, n.w, n.h, 11);
+      c.fillStyle = f; c.fill(); c.strokeStyle = st; c.lineWidth = px(lw); c.stroke();
+    }
+
+    c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+    for (const kind of ['leaf','question','group','top','side']){
+      const st = ST[kind], lod = st.s*s < 2.6;
+      if (lod) c.globalAlpha = .45; else c.font = st.font;
+      for (const n of S.byKind[kind]){
+        if (!vis(n.left, n.top, n.left+n.w, n.top+n.h)) continue;
+        let col = COL.ink;
+        if (kind==='side') col = COL['on-'+n.side];
+        else if (kind==='leaf') col = leafColors(n)[2];
+        else if (n.active) col = COL[n.side];
+        c.fillStyle = col; drawLines(c, n, st, lod);
+      }
+      c.globalAlpha = 1;
+    }
+
+    if (vis(-ROOT_R, -ROOT_R, ROOT_R, ROOT_R)){
+      c.beginPath(); c.arc(0, 0, ROOT_R, 0, Math.PI*2);
+      c.fillStyle = COL.surface; c.fill(); c.strokeStyle = COL.ink; c.lineWidth = px(1.6); c.stroke();
+      c.fillStyle = COL.ink; c.font = `700 22px ${MAP_F}`; c.fillText('角球', 0, -5 + 22*0.36);
+      c.fillStyle = COL.muted; c.font = `500 10.5px ${UI_F}`; c.fillText(S.centerSub, 0, 21);
+    }
+    for (const h of S.heads){
+      if (!vis(h.x - h.hw/2, h.y - 30, h.x + h.hw/2, h.y + 34)) continue;
+      c.fillStyle = COL[h.side]; c.font = `700 28px ${UI_F}`; c.fillText(h.t1, h.x, h.y);
+      c.fillStyle = COL.muted; c.font = `500 14px ${UI_F}`; c.fillText(h.t2, h.x, h.y + 28);
+    }
+  }
+
+  // 低解析度全圖（長邊最多 2048 像素）
+  function drawBase(){
+    if (!scene) return;
+    const b = Math.min(2048/bounds.w, 2048/bounds.h, 1.5);
+    const w = Math.ceil(bounds.w*b), h = Math.ceil(bounds.h*b);
+    if (base.width !== w || base.height !== h){ base.width = w; base.height = h; }
+    base.style.width = bounds.w + 'px'; base.style.height = bounds.h + 'px';
+    bctx.setTransform(1, 0, 0, 1, 0, 0); bctx.fillStyle = COL.board; bctx.fillRect(0, 0, w, h);
+    bctx.setTransform(b, 0, 0, b, -bounds.x*b, -bounds.y*b);
+    drawScene(bctx, bounds.x, bounds.y, bounds.x+bounds.w, bounds.y+bounds.h, b);
+  }
+  // 清晰的主畫布：畫當前畫面加上四周 M 像素的預留區
+  function drawMain(){
+    if (!scene || !W) return;
+    const t0 = performance.now();
+    const c = ctx, s = C.s;
+    c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = COL.board; c.fillRect(0, 0, cv.width, cv.height);
+    c.setTransform(DPR*s, 0, 0, DPR*s, DPR*(C.tx+M), DPR*(C.ty+M));
+    drawScene(c, (-M-C.tx)/s, (-M-C.ty)/s, (W+M-C.tx)/s, (H+M-C.ty)/s, s);
+    lastDrawMs = performance.now() - t0;
+  }
+  // 只改兩個圖層的 transform：由系統合成器（GPU）直接移動/縮放，不重畫內容
+  function placeLayers(){
+    const k = V.s/C.s;
+    cv.style.transform = `translate(${(V.tx - k*(C.tx+M)).toFixed(2)}px,${(V.ty - k*(C.ty+M)).toFixed(2)}px) scale(${k.toFixed(5)})`;
+    const wt = `translate(${(V.tx + bounds.x*V.s).toFixed(2)}px,${(V.ty + bounds.y*V.s).toFixed(2)}px) scale(${V.s.toFixed(5)})`;
+    worldBase.style.transform = wt; worldTop.style.transform = wt;
+    showPct();
+  }
+  // 手指移動時直接在觸控事件裡更新（不經 requestAnimationFrame，Safari 在嵌入頁面/低耗電模式下會把它限制在 30 次/秒）
+  function live(){ perfTick(); placeLayers(); }
+  function commit(force){
+    const same = C.s===V.s && C.tx===V.tx && C.ty===V.ty;
+    Object.assign(C, V);
+    if (force || !same) drawMain();
+    placeLayers();
+  }
+  function invalidate(){ drawBase(); commit(true); }   // 內容改變（選擇、名稱、只看已選、主題）
+
+  // 定位閃爍框放在跟著導圖一起移動的圖層裡（以導圖座標定位）
+  function startFlash(box, side, targetScale){
+    const b = box;
+    flashEl.className = 'flashbox ' + side;
+    flashEl.style.left = (b.x0 - 12 - bounds.x) + 'px'; flashEl.style.top = (b.y0 - 8 - bounds.y) + 'px';
+    flashEl.style.width = (b.x1 - b.x0 + 24) + 'px'; flashEl.style.height = (b.y1 - b.y0 + 16) + 'px';
+    flashEl.style.borderWidth = (2/targetScale).toFixed(3) + 'px'; flashEl.style.borderRadius = (12/targetScale).toFixed(2) + 'px';
+    flashEl.hidden = false; flashEl.style.animation = 'none'; void flashEl.offsetWidth; flashEl.style.animation = '';
+    clearTimeout(flashT); flashT = setTimeout(() => { flashEl.hidden = true; }, 1700);
+  }
+
+  /* ---------- 效能顯示（連結後加 #perf 才會出現） ---------- */
+  const perfEl = document.getElementById('perf');
+  let perfEv = 0, perfFr = 0, perfOn = false, perfLast = 0;
+  function perfTick(){ if (perfOn) perfEv++; }
+  function perfLoop(now){
+    if (!perfOn) return;
+    perfFr++;
+    if (now - perfLast >= 1000){
+      const sec = (now - perfLast)/1000;
+      perfEl.textContent = `輸入 ${Math.round(perfEv/sec)}/秒 · 畫面回呼 ${Math.round(perfFr/sec)}/秒 · 重畫 ${lastDrawMs.toFixed(1)} 毫秒`;
+      perfEv = 0; perfFr = 0; perfLast = now;
+    }
+    requestAnimationFrame(perfLoop);
+  }
+  function checkPerfHash(){
+    const on = /(^#|&)perf\b/.test(location.hash);
+    if (on === perfOn) return;
+    perfOn = on; perfEl.hidden = !on;
+    if (on){ perfEl.textContent = '量測中…'; perfLast = performance.now(); requestAnimationFrame(perfLoop); }
+  }
+  addEventListener('hashchange', checkPerfHash);
+  checkPerfHash();
+
+  /* ---------- 縮放與拖曳 ---------- */
+  const MIN_S = 0.06, MAX_S = 5;
+  const clamp = s => Math.min(MAX_S, Math.max(MIN_S, s));
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const zPct = document.getElementById('zPct');
+  let fitted = false, animT = 0, pctShown = '';
+  function showPct(){ const t = Math.round(V.s*100) + '%'; if (t !== pctShown){ zPct.textContent = t; pctShown = t; } }
+
+  function fitTarget(){
+    const b = bounds, padX = 24, top = 46, bottom = 62;
+    const s = clamp(Math.min((W-padX*2)/b.w, (H-top-bottom)/b.h));
+    return { s, tx: padX + (W-padX*2-b.w*s)/2 - b.x*s, ty: top + (H-top-bottom-b.h*s)/2 - b.y*s };
+  }
+  function zoomTarget(px, py, f){
+    const ns = clamp(V.s*f), k = ns/V.s;
+    return { s:ns, tx: px-(px-V.tx)*k, ty: py-(py-V.ty)*k };
+  }
+  // 按鈕縮放、全貌、定位的動畫交給 CSS 過渡：由系統合成器執行，不受網頁節流影響
+  function stopAnim(){
+    if (!animT) return;
+    clearTimeout(animT); animT = 0; stage.classList.remove('anim'); commit();
+  }
+  function animateTo(t){
+    stopAnim();
+    if (reduced){ Object.assign(V, t); commit(); return; }
+    stage.classList.add('anim');
+    void cv.offsetWidth;
+    Object.assign(V, t); placeLayers();
+    animT = setTimeout(() => { animT = 0; stage.classList.remove('anim'); commit(); }, 320);
+  }
+  const fit = animate => { const t = fitTarget(); if (animate) animateTo(t); else { stopAnim(); Object.assign(V, t); commit(); } };
+  function zoomLive(px, py, f){ stopAnim(); Object.assign(V, zoomTarget(px, py, f)); live(); }
+
+  function resize(width, height){
+    W = width; H = height;
+    const d = Math.min(window.devicePixelRatio || 1, 2), dprChanged = d !== DPR;
+    DPR = d;
+    M = Math.round(Math.min(240, Math.max(100, Math.min(W, H)*0.3)));
+    const w = Math.round((W+2*M)*DPR), h = Math.round((H+2*M)*DPR);
+    if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
+    cv.style.width = (W+2*M) + 'px'; cv.style.height = (H+2*M) + 'px';
+    if (dprChanged) drawBase();
+  }
+  new ResizeObserver(([en]) => {
+    const { width, height } = en.contentRect;
+    if (!width || !height) return;
+    if (!fitted){ resize(width, height); Object.assign(V, fitTarget()); fitted = true; commit(true); return; }
+    V.tx += (width-W)/2; V.ty += (height-H)/2;
+    resize(width, height); commit(true);
+  }).observe(stage);
+
+  function hitLeaf(px, py, coarse){
+    const wx = (px - V.tx)/V.s, wy = (py - V.ty)/V.s;
+    let best = null, bd = Infinity;
+    for (const L of leafBoxes){
+      const dx = Math.max(L.x0 - wx, 0, wx - L.x1), dy = Math.max(L.y0 - wy, 0, wy - L.y1);
+      const d = dx*dx + dy*dy;
+      if (d < bd){ bd = d; best = L; }
+    }
+    const tol = (coarse ? 12 : 2) / V.s;
+    return best && bd <= tol*tol ? best : null;
+  }
+
+  // 手勢期間沿用按下時量到的位置，避免每次移動都觸發版面計算
+  let rect = null;
+  const freshRect = () => (rect = stage.getBoundingClientRect());
+  const local = e => { const r = rect || freshRect(); return { x:e.clientX-r.left, y:e.clientY-r.top }; };
+  const pts = new Map(); let drag = null, pinch = null;
+  function setHover(key){
+    if (key === hoverKey) return;
+    hoverKey = key; stage.classList.toggle('onleaf', !!key);
+    if (!pts.size && !animT) commit(true);
+  }
+  stage.addEventListener('pointerdown', e => {
+    if (e.pointerType==='mouse' && e.button!==0) return;
+    stopAnim();
+    if (!pts.size) freshRect();
+    try { stage.setPointerCapture(e.pointerId); } catch(_){}
+    pts.set(e.pointerId, local(e));
+    if (pts.size===1){
+      const p = pts.get(e.pointerId);
+      drag = { x:p.x, y:p.y, tx:V.tx, ty:V.ty, moved:false, coarse: e.pointerType!=='mouse' };
+    } else if (pts.size===2){
+      if (drag) drag.moved = true;
+      const [a,b] = [...pts.values()];
+      pinch = { d:Math.hypot(a.x-b.x,a.y-b.y)||1, mx:(a.x+b.x)/2, my:(a.y+b.y)/2, s:V.s, tx:V.tx, ty:V.ty };
+    }
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)){
+      if (e.pointerType==='mouse' && !animT){ freshRect(); const p = local(e), h = hitLeaf(p.x, p.y, false); setHover(h ? `${h.side}|${h.qi}|${h.i}` : null); }
+      return;
+    }
+    pts.set(e.pointerId, local(e));
+    if (pinch && pts.size >= 2){
+      const [a,b] = [...pts.values()];
+      const d = Math.hypot(a.x-b.x,a.y-b.y)||1, mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+      const ns = clamp(pinch.s*d/pinch.d), wx = (pinch.mx-pinch.tx)/pinch.s, wy = (pinch.my-pinch.ty)/pinch.s;
+      V.s = ns; V.tx = mx-wx*ns; V.ty = my-wy*ns; live();
+      return;
+    }
+    if (drag){
+      const p = pts.get(e.pointerId), dx = p.x-drag.x, dy = p.y-drag.y;
+      if (!drag.moved && Math.hypot(dx,dy) > 6){ drag.moved = true; stage.classList.add('dragging'); if (hoverKey){ hoverKey = null; stage.classList.remove('onleaf'); } }
+      if (drag.moved){ V.tx = drag.tx+dx; V.ty = drag.ty+dy; live(); }
+    }
+  });
+  function up(e){
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    try { stage.releasePointerCapture(e.pointerId); } catch(_){}
+    if (pts.size===1 && pinch){
+      pinch = null;
+      const p = [...pts.values()][0];
+      drag = { x:p.x, y:p.y, tx:V.tx, ty:V.ty, moved:true, coarse:true };
+      return;
+    }
+    if (pts.size===0){
+      const wasTap = drag && !drag.moved && e.type==='pointerup';
+      const tapAt = drag ? { x:drag.x, y:drag.y, coarse:drag.coarse } : null;
+      drag = null; pinch = null; stage.classList.remove('dragging');
+      if (wasTap){
+        const hit = hitLeaf(tapAt.x, tapAt.y, tapAt.coarse);
+        if (hit){ toggleChoice(hit.side, hit.qi, hit.i, 'map'); return; }
+      }
+      commit();
+    }
+  }
+  stage.addEventListener('pointerup', up);
+  stage.addEventListener('pointercancel', up);
+  stage.addEventListener('pointerleave', e => { if (e.pointerType==='mouse' && !pts.size) setHover(null); });
+  let wheelT = 0;
+  stage.addEventListener('wheel', e => {
+    e.preventDefault();
+    if (!wheelT) freshRect();
+    const p = local(e);
+    const lineMode = e.deltaMode !== 0;
+    const mouseLike = lineMode || (e.deltaX===0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
+    if (e.ctrlKey || e.metaKey || mouseLike){
+      const dy = lineMode ? e.deltaY*16 : e.deltaY;
+      zoomLive(p.x, p.y, Math.exp(-dy*(e.ctrlKey ? 0.01 : 0.0022)));
+    } else {
+      stopAnim(); V.tx -= e.deltaX; V.ty -= e.deltaY; live();
+    }
+    clearTimeout(wheelT); wheelT = setTimeout(() => { wheelT = 0; commit(); }, 160);
+  }, { passive:false });
+  // Safari 觸控板手勢（觸控螢幕的雙指縮放由上面的 pointer 事件處理）
+  let gs = null;
+  stage.addEventListener('gesturestart', e => { e.preventDefault(); gs = pts.size ? null : V.s; if (gs!=null){ stopAnim(); freshRect(); } });
+  stage.addEventListener('gesturechange', e => {
+    e.preventDefault();
+    if (pts.size || gs==null) return;
+    const p = local(e); zoomLive(p.x, p.y, (gs*e.scale)/V.s);
+  });
+  stage.addEventListener('gestureend', e => { e.preventDefault(); if (gs!=null) commit(); gs = null; });
+  stage.addEventListener('dblclick', e => {
+    freshRect(); const p = local(e);
+    if (hitLeaf(p.x, p.y, false)) return;
+    animateTo(zoomTarget(p.x, p.y, 1.8));
+  });
+  document.getElementById('zIn').onclick  = () => animateTo(zoomTarget(W/2, H/2, 1.35));
+  document.getElementById('zOut').onclick = () => animateTo(zoomTarget(W/2, H/2, 1/1.35));
+  document.getElementById('zFit').onclick = () => fit(true);
+  zPct.onclick = () => animateTo(zoomTarget(W/2, H/2, 1/V.s));
+  document.addEventListener('keydown', e => {
+    if (e.key==='Escape' && !copyDialog.hidden){ copyDialog.hidden = true; return; }
+    if (e.target.closest && e.target.closest('input,textarea')) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key==='+' || e.key==='=') animateTo(zoomTarget(W/2,H/2,1.35));
+    else if (e.key==='-' || e.key==='_') animateTo(zoomTarget(W/2,H/2,1/1.35));
+    else if (e.key==='0') fit(true);
+  });
+
+  /* ---------- 選擇 ---------- */
+  function toggleChoice(side, qi, i, from){
+    const q = QUESTIONS[qi]; if (!q) return;
+    if (state[side][q.key]===i) delete state[side][q.key]; else state[side][q.key] = i;
+    save();
+    render({ side, qi, i });
+    updatePanel();
+    if (from==='map' && panelVisibleBeside()){ setTab(side); scrollRowIntoView(side, qi); }
+  }
+
+  /* ---------- 面板 ---------- */
+  const panelBody = document.getElementById('panelBody');
+  const narrow = matchMedia('(max-width: 899px)');
+  const panelVisibleBeside = () => document.body.classList.contains('panel-open') && !narrow.matches;
+  const LOCATE_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg>';
+  const chipEls = [], rowEls = [];
+  function qRow(side, q, big){
+    const row = document.createElement('div');
+    row.className = 'q' + (big ? ' big' : '');
+    row.dataset.side = side; row.dataset.q = q.qi;
+    const head = document.createElement('div'); head.className = 'q-head';
+    const lab = document.createElement('span'); lab.className = 'q-label'; lab.textContent = q.label;
+    const loc = document.createElement('button'); loc.className = 'locate'; loc.type = 'button';
+    loc.dataset.side = side; loc.dataset.q = q.qi; loc.innerHTML = LOCATE_ICON;
+    loc.setAttribute('aria-label', `在導圖中定位：${q.label}`); loc.title = '在導圖中定位';
+    head.append(lab, loc);
+    const chips = document.createElement('div'); chips.className = 'chips';
+    q.options.forEach((o,i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip' + (o.length > 9 ? ' long' : '');
+      b.dataset.side = side; b.dataset.q = q.qi; b.dataset.i = i;
+      b.setAttribute('aria-pressed','false'); b.textContent = o;
+      chips.append(b); chipEls.push({ el:b, side, key:q.key, i, on:null });
+    });
+    row.append(head, chips);
+    rowEls.push({ el:row, side, key:q.key, on:null });
+    return row;
+  }
+  function panelNode(side, n, depth){
+    if (n.options && depth > 0) return qRow(side, n, false);
+    const sec = document.createElement('section');
+    sec.className = 'grp d' + depth;
+    if (n.options){ sec.append(qRow(side, n, true)); return sec; }
+    const h = document.createElement(depth===0 ? 'h3' : depth===1 ? 'h4' : 'h5');
+    h.textContent = n.label; sec.append(h);
+    const inner = document.createElement('div'); inner.className = 'grp-body';
+    n.children.forEach(c => inner.append(panelNode(side, c, depth+1)));
+    sec.append(inner);
+    return sec;
+  }
+  SIDES.forEach(side => {
+    const wrap = document.createElement('div');
+    wrap.className = 'pside ' + side; wrap.id = 'pside-' + side;
+    wrap.setAttribute('role','tabpanel'); wrap.setAttribute('aria-labelledby','tab-'+side);
+    const note = document.createElement('p'); note.className = 'pnote'; wrap.append(note);
+    TREE.forEach(n => wrap.append(panelNode(side, n, 0)));
+    panelBody.append(wrap);
+  });
+  function setTab(side){
+    SIDES.forEach(s => {
+      document.getElementById('tab-'+s).setAttribute('aria-selected', String(s===side));
+      document.getElementById('pside-'+s).hidden = s!==side;
+    });
+  }
+  SIDES.forEach(s => document.getElementById('tab-'+s).addEventListener('click', () => { setTab(s); panelBody.scrollTop = 0; }));
+  const compactBtn = document.getElementById('compactBtn');
+  function updatePanel(){
+    chipEls.forEach(c => {
+      const on = state[c.side][c.key] === c.i;
+      if (on !== c.on){ c.el.setAttribute('aria-pressed', String(on)); c.on = on; }
+    });
+    rowEls.forEach(r => {
+      const on = state[r.side][r.key] != null;
+      if (on !== r.on){ r.el.classList.toggle('answered', on); r.on = on; }
+    });
+    SIDES.forEach(s => {
+      const t = document.getElementById('tab-'+s);
+      t.querySelector('.tn').textContent = `${team(s)}進攻`;
+      t.querySelector('.tc').textContent = `${answered(s)} / ${TOTAL}`;
+      document.querySelector(`#pside-${s} .pnote`).textContent =
+        `${team(s)} 向 ${team(other(s))} 進攻 · 對應導圖${s==='home'?'左':'右'}半邊`;
+    });
+    compactBtn.setAttribute('aria-pressed', String(state.compact));
+  }
+  function scrollRowIntoView(side, qi){
+    const row = panelBody.querySelector(`.q[data-side="${side}"][data-q="${qi}"]`);
+    if (!row) return;
+    const rr = row.getBoundingClientRect(), pr = panelBody.getBoundingClientRect();
+    let top = null;
+    if (rr.top < pr.top + 8) top = panelBody.scrollTop + rr.top - pr.top - 8;
+    else if (rr.bottom > pr.bottom - 8) top = panelBody.scrollTop + rr.bottom - pr.bottom + 8;
+    if (top!=null) panelBody.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' });
+  }
+  panelBody.addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (chip){ toggleChoice(chip.dataset.side, +chip.dataset.q, +chip.dataset.i, 'panel'); return; }
+    const loc = e.target.closest('.locate');
+    if (loc) focusQuestion(loc.dataset.side, +loc.dataset.q);
+  });
+  function focusQuestion(side, qi){
+    const b = qBox.get(`${side}|${qi}`); if (!b) return;
+    if (narrow.matches) setPanel(false);
+    const s = clamp(Math.max(V.s, Math.min(1.6, (W-60)/(b.x1-b.x0))));
+    const cx = (b.x0+b.x1)/2, cy = (b.y0+b.y1)/2;
+    animateTo({ s, tx: W/2 - cx*s, ty: H/2 - cy*s });
+    startFlash(b, side, s);
+  }
+
+  /* ---------- 工具列 ---------- */
+  const panelBtn = document.getElementById('panelBtn');
+  function setPanel(open){
+    document.body.classList.toggle('panel-open', open);
+    panelBtn.setAttribute('aria-pressed', String(open));
+  }
+  panelBtn.onclick = () => setPanel(!document.body.classList.contains('panel-open'));
+  document.getElementById('panelClose').onclick = () => setPanel(false);
+
+  compactBtn.onclick = () => { state.compact = !state.compact; save(); render(); updatePanel(); fit(true); };
+
+  const nameInputs = { home: document.getElementById('nameHome'), away: document.getElementById('nameAway') };
+  let nameT = 0;
+  SIDES.forEach(s => {
+    nameInputs[s].value = state.names[s];
+    nameInputs[s].addEventListener('input', () => {
+      state.names[s] = nameInputs[s].value; save();
+      clearTimeout(nameT); nameT = setTimeout(() => { render(); updatePanel(); }, 150);
+    });
+  });
+
+  const toastEl = document.getElementById('toast'); let toastT = 0;
+  function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 1800); }
+
+  const clearBtn = document.getElementById('clearBtn'); let armT = 0;
+  const disarm = () => { clearTimeout(armT); armT = 0; clearBtn.classList.remove('arm'); clearBtn.textContent = '清空'; };
+  clearBtn.onclick = () => {
+    if (!armT){ clearBtn.classList.add('arm'); clearBtn.textContent = '確認清空？'; armT = setTimeout(disarm, 3000); return; }
+    disarm();
+    state.home = {}; state.away = {}; save(); render(); updatePanel();
+    if (state.compact) fit(true);
+    toast('已清空兩邊的選擇');
+  };
+
+  function summaryText(){
+    const lines = [`角球預測：${team('home')} vs ${team('away')}`];
+    SIDES.forEach(side => {
+      lines.push('', `【${team(side)} 向 ${team(other(side))} 進攻】已選 ${answered(side)} / ${TOTAL}`);
+      let any = false;
+      TREE.forEach(top => {
+        const tl = top.label.replace('\n','');
+        if (top.options){
+          const i = state[side][top.key];
+          if (i != null){ any = true; lines.push(`▸ ${tl}：${top.options[i]}`); }
+          return;
+        }
+        const qs = QUESTIONS.filter(q => q.path[0]===tl && state[side][q.key] != null);
+        if (!qs.length) return;
+        any = true; lines.push(`▸ ${tl}`);
+        qs.forEach(q => lines.push(`   ${q.path.slice(1).join(' › ')}：${q.options[state[side][q.key]]}`));
+      });
+      if (!any) lines.push('（尚未選擇）');
+    });
+    return lines.join('\n');
+  }
+  const copyDialog = document.getElementById('copyDialog'), copyText = document.getElementById('copyText');
+  function openCopy(t){ copyText.value = t; copyDialog.hidden = false; copyText.focus(); copyText.select(); }
+  document.getElementById('copyBtn').onclick = () => {
+    const t = summaryText();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(t).then(() => toast('已複製選擇結果'), () => openCopy(t));
+      else openCopy(t);
+    } catch(e){ openCopy(t); }
+  };
+  document.getElementById('copyClose').onclick = () => { copyDialog.hidden = true; };
+  copyDialog.addEventListener('click', e => { if (e.target===copyDialog) copyDialog.hidden = true; });
+
+  /* ---------- 啟動 ---------- */
+  if (/[?&]cmdebug\b/.test(location.search)) window.__cm = {
+    leaves: () => leafBoxes, view: () => ({ ...V }),
+    timeFull: n => { const t0 = performance.now(); for (let i = 0; i < n; i++) drawMain(); return (performance.now()-t0)/n; },
+    timeLive: n => { const t0 = performance.now(); for (let i = 0; i < n; i++){ V.s *= 1.001; placeLayers(); } return (performance.now()-t0)/n; } };
+  setTab('home');
+  setPanel(!narrow.matches);
+  render(); updatePanel();
+})();
+</script>
+<script>
+/* 主畫面 App：註冊離線快取，並在 Safari 裡提示「加入主畫面」 */
+(() => {
+  const secure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if ('serviceWorker' in navigator && secure){
+    addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+    try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch(e){}
+  }
+  const hint = document.getElementById('installHint');
+  let dismissed = false;
+  try { dismissed = localStorage.getItem('corner-mindmap-install-hint') === '1'; } catch(e){}
+  const iosSafari = /iP(ad|hone|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (secure && iosSafari && navigator.standalone === false && !dismissed) hint.hidden = false;
+  document.getElementById('installClose').onclick = () => {
+    hint.hidden = true;
+    try { localStorage.setItem('corner-mindmap-install-hint', '1'); } catch(e){}
+  };
+})();
+</script>
+</body>
+</html>
